@@ -29,15 +29,19 @@ function generate(weights, biases) {
 
 function cost(output, target) {
   let cost = 0;
-  for (let i = 0; i < target.length; i++) cost -= Math.abs(target[i] - output.neurons[i].value)
+  for (let i = 0; i < target.length; i++) cost += Math.abs(target[i] - output.neurons[i].value)
   return cost;
 }
 
 let output = generate(weights, biases);
 console.log(output.neurons.map(a => a = a.value), cost(output, data))
+let explorationMultiplier = 1;
 for (let i = 0; i < 10000; i++) {
-  if ((i + 1) % 100 == 0) console.log(i, cost(output, data))
-  let exploration = Math.random() / 4;
+  if ((i + 1) % 100 == 0) {
+    explorationMultiplier = (i / 10000)**4;
+    console.log(i, cost(output, data))
+  }
+  let exploration = Math.random() / 4 * explorationMultiplier;
   let layer = Math.floor(Math.random() * weights.length);
   let neuron = Math.floor(Math.random() * weights[layer].length);
   let weight = Math.floor(Math.random() * weights[layer][neuron].length);
@@ -47,13 +51,31 @@ for (let i = 0; i < 10000; i++) {
   weights[layer][neuron][weight] -= exploration * 2;
   let sample2 = generate(weights, biases);
   weights[layer][neuron][weight] = oldWeight;
-  if (cost(sample1, data) > cost(output, data)) {
+  if (cost(sample1, data) < cost(output, data)) {
     output = sample1;
     weights[layer][neuron][weight] = oldWeight + exploration;
   }
-  if (cost(sample2, data) > cost(output, data)) {
+  if (cost(sample2, data) < cost(output, data)) {
     output = sample2;
     weights[layer][neuron][weight] = oldWeight - exploration;
+  }
+
+  exploration = Math.random() * explorationMultiplier;
+  layer = Math.floor(Math.random() * biases.length);
+  neuron = Math.floor(Math.random() * biases[layer].length);
+  let oldBias = biases[layer][neuron];
+  biases[layer][neuron] += exploration;
+  sample1 = generate(weights, biases);
+  biases[layer][neuron] -= exploration * 2
+  sample2 = generate(weights, biases);
+  biases[layer][neuron] = oldBias;
+  if (cost(sample1, data) < cost(output, data)) {
+    output = sample1;
+    biases[layer][neuron] = oldBias + exploration;
+  }
+  if (cost(sample2, data) < cost(output, data)) {
+    output = sample2;
+    biases[layer][neuron] = oldBias - exploration;
   }
 }
 

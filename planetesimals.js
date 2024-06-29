@@ -158,7 +158,6 @@ function planetesimals(record) {
 
     process.on('SIGINT', async () => {
       endScript = true;
-      dataQueue.push('\n]');
       await data.write(dataQueue.join(''));
       data.close();
       process.exit();
@@ -388,7 +387,7 @@ function planetesimals(record) {
   bullet = [];
 
   function fireBullet() { //addMass(x, y, r, sides, Vx, Vy)
-    game.score -= 100;
+    //game.score -= 100;
     var i = bullet.length;
     var angle = mass[0].angle + Math.PI * 0.5;
     var speed = 9;
@@ -426,7 +425,7 @@ function planetesimals(record) {
   function controls() {
     if (mass[0].alive) {
       if (keys[32] && mass[0].fireCD < game.cycle) {
-        mass[0].fireCD = game.cycle + 10; // ?/60 seconds of cooldown before you can fire
+        mass[0].fireCD = game.cycle + 25; // 10 in the actual game // ?/60 seconds of cooldown before you can fire
         fireBullet();
       }
 
@@ -603,7 +602,7 @@ function planetesimals(record) {
       //match the collisions pair id to the mass
       for (var j = 1; j < mass.length; j++) { //start at 1 to skip the player
         if (mass[j].id === m.id) {
-          game.score += 300;
+          //game.score += 300;
           //remove bullet
           Matter.World.remove(engine.world, bullet[i]);
           bullet.splice(i, 1);
@@ -963,8 +962,8 @@ function generate(inputs, weights, biases) {
 
 async function generation(inputs, layers, neurons, outputs, agentCount, winners, mutators, record = false) {
   const start = new Date().getTime();
-  const agents = [];
-  const threadQueue = [];
+  let agents = [];
+  let threadQueue = [];
   let threads = 0;
 
   function updateQueue() {
@@ -972,7 +971,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
       const thread = new worker.Worker('./planetesimals', { workerData: threadQueue[0]});
       thread.on('message', (message) => {
         thread.terminate();
-        console.log(agents.push(message));
+        if (agents.push(message) % 10 == 0) console.log(agents.length);
         threads--;
         updateQueue();
       });
@@ -992,7 +991,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
     }
     updateQueue();
   } else {
-    for (let i = 0; i < winners; i++) threadQueue.push({ record, weights: winners[i].weights, biases: winners[i].biases });
+    for (let i = 0; i < winners.length; i++) threadQueue.push({ record, weights: winners[i].weights, biases: winners[i].biases });
     updateQueue();
     for (let i = 0; i < 2; i++) {
       for (let j = 0 + i * winners.length; j < mutators.length; j++) {
@@ -1014,19 +1013,22 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
   await (new Promise(res => doneCheck(res)));
   console.log(`Finished in ${new Date().getTime() - start} milliseconds`);
 
-  //for (let i = 0; i < agents.length; i++) agents[i].score += agents[i].game.startingMassValue - agents[i].game.currentMass;
   agents.sort((a, b) => b.game.score - a.game.score);
   return agents
 }
 
 (async () => {
   if (worker.isMainThread) {
-    let winner = await generation(42, 2, 20, 5, 100);
-    console.log('Generaton 1:', winner.map(a => ({ score: a.game.score, level: a.game.level })));
-    for (let i = 0; i < 1; i++) {
-      winner = await generation(42, 2, 20, 5, 100, winner.slice(0, 10), winner.slice(0, 50), i == 99);
-      console.log(`Generation ${i + 2}:`, winner.map(a => ({ score: a.game.score, level: a.game.level })));
+    let latest = await generation(42, 2, 20, 5, 100);
+    let average = 0;
+    latest.forEach(a => average += a.game.score);
+    average /= latest.length;
+    console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
+    for (let i = 0; i < 100; i++) {
+      winner = await generation(42, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
+      console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     }
+    fs.writeFileSync('./winner.json', JSON.stringify({ weights: latest[0].weights, biases: latest[0].biases }));
   } else {
     const agent = planetesimals(worker.workerData.record);
     for (let i = 0; i < 3600; i++) {
@@ -1034,7 +1036,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
       agent.mass.slice(1).sort((a, b) => {
         return Math.sqrt((a.position.x - agent.mass[0].position.x)**2 + (a.position.y - agent.mass[0].position.y)**2) - Math.sqrt((b.position.x - agent.mass[0].position.x)**2 + (b.position.y - agent.mass[0].position.y)**2)
       }).slice(0, 10).forEach(a => asteroids.push(a.position.x, a.position.y, a.velocity.x, a.velocity.y));
-      const output = generate([agent.mass[0].position.x, agent.mass[0].position.y].concat(asteroids), worker.workerData.weights, worker.workerData.biases);
+      const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].angle].concat(asteroids), worker.workerData.weights, worker.workerData.biases);
       agent.keys[37] = output.neurons[0].value > 0.5; // left
       agent.keys[38] = output.neurons[1].value > 0.5; // up
       agent.keys[39] = output.neurons[2].value > 0.5; // right
@@ -1042,6 +1044,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
       agent.keys[32] = output.neurons[4].value > 0.5; // space
       agent.cycle();
     }
+    agent.game.score += agent.game.startingMassValue - agent.game.currentMass;
     worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, weights: worker.workerData.weights, biases: worker.workerData.biases });
   }
 })();

@@ -1019,13 +1019,13 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
 
 (async () => {
   if (worker.isMainThread) {
-    let latest = await generation(43, 2, 20, 5, 100);
+    let latest = await generation(45, 2, 20, 5, 100);
     let average = 0;
     latest.forEach(a => average += a.game.score);
     average /= latest.length;
     console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     for (let i = 0; i < 100; i++) {
-      winner = await generation(43, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
+      winner = await generation(45, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
       console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     }
     fs.writeFileSync('./winner.json', JSON.stringify({ weights: latest[0].weights, biases: latest[0].biases }));
@@ -1036,7 +1036,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
       agent.mass.slice(1).sort((a, b) => {
         return Math.sqrt((a.position.x - agent.mass[0].position.x)**2 + (a.position.y - agent.mass[0].position.y)**2) - Math.sqrt((b.position.x - agent.mass[0].position.x)**2 + (b.position.y - agent.mass[0].position.y)**2)
       }).slice(0, 10).forEach(a => asteroids.push(a.position.x, a.position.y, a.velocity.x, a.velocity.y));
-      const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].angle].concat(asteroids), worker.workerData.weights, worker.workerData.biases);
+      const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle].concat(asteroids), worker.workerData.weights, worker.workerData.biases);
       agent.keys[37] = output.neurons[0].value > 0.5; // left
       agent.keys[38] = output.neurons[1].value > 0.5; // up
       agent.keys[39] = output.neurons[2].value > 0.5; // right

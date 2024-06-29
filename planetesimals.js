@@ -1025,10 +1025,10 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
     average /= latest.length;
     console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     for (let i = 0; i < 100; i++) {
-      winner = await generation(45, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
+      latest = await generation(45, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
       console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     }
-    fs.writeFileSync('./winner.json', JSON.stringify({ weights: latest[0].weights, biases: latest[0].biases }));
+    fs.writeFileSync('./winners.json', JSON.stringify(latest.slice(0, 50).map(a => ({ weights: a.weights, biases: a.biases }))));
   } else {
     const agent = planetesimals(worker.workerData.record);
     for (let i = 0; i < 3600; i++) {
@@ -1048,3 +1048,4 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
     worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, weights: worker.workerData.weights, biases: worker.workerData.biases });
   }
 })();
+

@@ -1019,13 +1019,13 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
 
 (async () => {
   if (worker.isMainThread) {
-    let latest = await generation(42, 2, 20, 5, 100);
+    let latest = await generation(43, 2, 20, 5, 100);
     let average = 0;
     latest.forEach(a => average += a.game.score);
     average /= latest.length;
     console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     for (let i = 0; i < 100; i++) {
-      winner = await generation(42, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
+      winner = await generation(43, 2, 20, 5, 100, latest.slice(0, 10), latest.slice(0, 50), i == 99);
       console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     }
     fs.writeFileSync('./winner.json', JSON.stringify({ weights: latest[0].weights, biases: latest[0].biases }));

@@ -1044,7 +1044,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
         const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
         const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
         a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
-        a.velocity.playerDist = (Math.sqrt(nextDistX**2 + nextDistY**2)) - a.playerDist;
+        a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
       });
       agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach(a => asteroids.push(a.playerAngle, a.playerDist, a.velocity.playerAngle, a.velocity.playerDist));
       const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle].concat(asteroids), worker.workerData.weights, worker.workerData.biases);

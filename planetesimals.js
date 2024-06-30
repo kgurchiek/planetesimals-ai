@@ -726,7 +726,7 @@ function planetesimals(record) {
       damage();
       gravity();
       //background graphics
-      drawStars();
+      //drawStars();
 
       HUD();
       ctx.save(); //move camera
@@ -887,13 +887,13 @@ function planetesimals(record) {
   }
 
   var star = [];
-  var totalStars = 100;
+  /*var totalStars = 100;
   for (var i = 0; i < totalStars; i++) {
     star.push({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight
     });
-  }
+  }*/
 
   function starsMoveRandom() {
     for (var i = 0; i < totalStars; i++) {
@@ -1014,7 +1014,7 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
   console.log(`Finished in ${new Date().getTime() - start} milliseconds`);
 
   agents.sort((a, b) => b.game.score - a.game.score);
-  return agents
+  return agents;
 }
 
 (async () => {
@@ -1036,9 +1036,17 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
     const agent = planetesimals(worker.workerData.record);
     for (let i = 0; i < 3600; i++) {
       const asteroids = [];
-      agent.mass.slice(1).sort((a, b) => {
-        return Math.sqrt((a.position.x - agent.mass[0].position.x)**2 + (a.position.y - agent.mass[0].position.y)**2) - Math.sqrt((b.position.x - agent.mass[0].position.x)**2 + (b.position.y - agent.mass[0].position.y)**2)
-      }).slice(0, 10).forEach(a => asteroids.push(a.position.x, a.position.y, a.velocity.x, a.velocity.y));
+      agent.mass.slice(1).forEach(a => {
+        const distX = a.position.x - agent.mass[0].position.x;
+        const distY = a.position.y - agent.mass[0].position.y;
+        a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
+        a.playerDist = Math.sqrt(distX**2 + distY**2);
+        const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
+        const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
+        a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
+        a.velocity.playerDist = (Math.sqrt(nextDistX**2 + nextDistY**2)) - a.playerDist;
+      });
+      agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach(a => asteroids.push(a.playerAngle, a.playerDist, a.velocity.playerAngle, a.velocity.playerDist));
       const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle].concat(asteroids), worker.workerData.weights, worker.workerData.biases);
       agent.keys[37] = output.neurons[0].value > 0.5; // left
       agent.keys[38] = output.neurons[1].value > 0.5; // up
@@ -1051,4 +1059,3 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
     worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, weights: worker.workerData.weights, biases: worker.workerData.biases });
   }
 })();
-

@@ -997,9 +997,9 @@ async function generation(inputs, layers, neurons, outputs, agentCount, winners,
       for (let j = 0 + i * winners.length; j < mutators.length; j++) {
         const workerData = { record };
         workerData.weights = mutators[j].weights;
-        if (i > 0) for (const layer of workerData.weights) for (const neuron of layer) for (let k = 0; k < neuron.length; k++) if (Math.random() < 0.05) neuron[k] += Math.random() / 2;
-        workerData.biases = mutators[j].biases
-        //if (i > 0) for (const layer of workerData.biases) for (let k = 0; k < layer.length; k++) if (Math.random() < 0.05) layer[k] += Math.random();
+        if (i > 0) for (const layer of workerData.weights) for (const neuron of layer) for (let k = 0; k < neuron.length; k++) if (Math.random() < 0.05) neuron[k] += Math.random() / 4 - 0.125;
+        workerData.biases = mutators[j].biases;
+        if (i > 0) for (const layer of workerData.biases) for (let k = 0; k < layer.length; k++) if (Math.random() < 0.05) layer[k] += Math.random() / 4 - 0.125;
         threadQueue.push(workerData)
       }
     }

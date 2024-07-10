@@ -1,3 +1,4 @@
+const fs = require('fs');
 const Matter = require('./matter.js');
 
 let document = {
@@ -51,7 +52,7 @@ fix new mass spawn so that it will pick a new location if the first spawn locati
 */
 
 module.exports = (record) => {
-  const data = record ? fs.createWriteStream('data.json') : null;
+  const data = record ? fs.createWriteStream('recording.json') : null;
   const dataQueue = ['['];
   let endScript = false;
   if (record) {
@@ -61,17 +62,11 @@ module.exports = (record) => {
         const save = dataQueue.join('');
         dataQueue.length = 0;
         await data.write(save);
+        console.log('saved')
       }
       setTimeout(writeLoop);
     }
     writeLoop();
-
-    process.on('SIGINT', async () => {
-      endScript = true;
-      await data.write(dataQueue.join(''));
-      data.close();
-      process.exit();
-    });
   }
 
   let mass;
@@ -243,6 +238,7 @@ module.exports = (record) => {
   }
 
   function spawnSetup() {
+    game.levelStart = new Date();
     //make the level indicator more clear on a new level
     document.getElementById("level").innerHTML = 'system ' + game.level;
     document.getElementById("level").style.color = 'white';
@@ -287,7 +283,7 @@ module.exports = (record) => {
       game.currentMass += mass[i].mass;
     }
     if (game.currentMass < game.startingMassValue * game.clearThreshold) {
-      game.score += 10000;
+      game.score += 10000 + mass[0].durability * 5000 - (new Date().getTime() - game.levelStart.getTime()) * 0.1;
       game.level++;
       spawnSetup();
       mass[0].durability = 1;
@@ -444,6 +440,7 @@ module.exports = (record) => {
     if (dV2 > limit2) { //did velocity change enough to take damage
       mass[0].durability -= Math.sqrt(dV2 - limit2) * 0.02; //player takes damage
       if (mass[0].durability < 0 && mass[0].alive) { //player dead?
+        game.score -= 3334;
         mass[0].alive = false;
         //spawn player explosion debris
         for (var j = 0; j < 10; j++) { //addMass(x, y, r, sides, Vx, Vy)

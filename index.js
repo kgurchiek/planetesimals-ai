@@ -157,7 +157,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
       average /= latest.length;
       console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
     }
-    fs.writeFileSync('./winners.json', JSON.stringify(latest.slice(0, 50).map(a => ({ weights: a.weights, biases: a.biases }))));
+    fs.writeFileSync('./winners.json', JSON.stringify(latest.slice(0, 50), '', '  '));
   } else {
     const agent = planetesimals(worker.workerData.record);
     for (let i = 0; i < 3600; i++) {

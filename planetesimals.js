@@ -1,4 +1,3 @@
-const fs = require('fs');
 const Matter = require('./matter.js');
 
 let document = {
@@ -52,22 +51,7 @@ fix new mass spawn so that it will pick a new location if the first spawn locati
 */
 
 module.exports = (record) => {
-  const data = record ? fs.createWriteStream('recording.json') : null;
-  const dataQueue = ['['];
-  let endScript = false;
-  if (record) {
-    const writeLoop = async () => {
-      if (endScript) return;
-      if (dataQueue.length > 0) {
-        const save = dataQueue.join('');
-        dataQueue.length = 0;
-        await data.write(save);
-        console.log('saved')
-      }
-      setTimeout(writeLoop);
-    }
-    writeLoop();
-  }
+  const recording = [];
 
   let mass;
   let bullet;
@@ -331,7 +315,7 @@ module.exports = (record) => {
   function controls() {
     if (mass[0].alive) {
       if (keys[32] && mass[0].fireCD < game.cycle) {
-        mass[0].fireCD = game.cycle + 25; // 10 in the actual game // ?/60 seconds of cooldown before you can fire
+        mass[0].fireCD = game.cycle + 40; // 10 in the actual game // ?/60 seconds of cooldown before you can fire
         fireBullet();
       }
 
@@ -622,7 +606,7 @@ module.exports = (record) => {
     ctx.canvas.height = window.innerHeight;
   };
 
-  return { keys, mass, game, cycle: () => { //render loop
+  return { keys, mass, game, recording, cycle: () => { //render loop
       game.cycle++;
       bulletEndCycle();
 
@@ -635,8 +619,11 @@ module.exports = (record) => {
       ctx.translate(-mass[0].position.x, -mass[0].position.y);
       explosions();
 
+      // game.score -= mass[0].velocity.x.toFixed(0) / 10;
+      // game.score -= mass[0].velocity.y.toFixed(0) / 10;
+      // game.score -= mass[0].angularVelocity.toFixed(3) * 100;
       Engine.update(engine);
-      if (record) dataQueue.push(`${game.cycle == 1 ? '' : ','}\n  {\n    "mass": [\n      ${mass.map(a => JSON.stringify({ alive: a.alive, angle: a.angle, position: a.position,vertices: a.vertices.map(b => ({ x: b.x, y: b.y })) })).join(',\n      ')}\n    ],\n    "bullet": [\n      ${bullet.map(a => JSON.stringify({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y })) }))}\n    ]\n  }`);
+      if (record) recording.push({ mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: a.position, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
       //console.log(mass.map(a => a = { x: a.position.x, y: a.position.y }))
       //window.requestAnimationFrame(cycle);
   }};

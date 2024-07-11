@@ -607,24 +607,24 @@ module.exports = (record) => {
   };
 
   return { keys, mass, game, recording, cycle: () => { //render loop
-      game.cycle++;
-      bulletEndCycle();
+    game.cycle++;
+    bulletEndCycle();
 
-      damage();
-      gravity();
+    damage();
+    gravity();
 
-      ctx.translate(window.innerWidth * 0.5, window.innerHeight * 0.5);
-      ctx.scale(game.scale, game.scale);
-      controls();
-      ctx.translate(-mass[0].position.x, -mass[0].position.y);
-      explosions();
+    ctx.translate(window.innerWidth * 0.5, window.innerHeight * 0.5);
+    ctx.scale(game.scale, game.scale);
+    controls();
+    ctx.translate(-mass[0].position.x, -mass[0].position.y);
+    explosions();
 
-      // game.score -= mass[0].velocity.x.toFixed(0) / 10;
-      // game.score -= mass[0].velocity.y.toFixed(0) / 10;
-      // game.score -= mass[0].angularVelocity.toFixed(3) * 100;
-      Engine.update(engine);
-      if (record) recording.push({ mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: a.position, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
-      //console.log(mass.map(a => a = { x: a.position.x, y: a.position.y }))
-      //window.requestAnimationFrame(cycle);
+    // game.score -= Math.abs(mass[0].velocity.x.toFixed(0) / 100);
+    // game.score -= Math.abs(mass[0].velocity.y.toFixed(0) / 100);
+    // game.score -= Math.abs(mass[0].angularVelocity.toFixed(3) * 10);
+    Engine.update(engine);
+    if (record) recording.push({ mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: a.position, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
+    //console.log(mass.map(a => a = { x: a.position.x, y: a.position.y }))
+    //window.requestAnimationFrame(cycle);
   }};
 }

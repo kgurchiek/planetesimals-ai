@@ -125,7 +125,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
           workerData.layers.push(newLayer);
         }
         workerData.nodeCount += 1;
-        if (i > 0 || j >= winners || true) mutate(workerData, 3);
+        if (i > 0 || j >= winners || true) mutate(workerData);
         threadQueue.push(workerData);
       }
     }

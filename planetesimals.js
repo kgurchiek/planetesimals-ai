@@ -66,7 +66,7 @@ module.exports = (record) => {
     gravity: 0.00011,
     totalMass: 0,
     massSize: 0,
-    level: 1,
+    level: 2,
     startingMassValue: 0,
     massSegment: 0,
     clearThreshold: 0.2, // there must be less than this percent to move on to the next level
@@ -623,7 +623,7 @@ module.exports = (record) => {
     // game.score -= Math.abs(mass[0].velocity.y.toFixed(0) / 100);
     // game.score -= Math.abs(mass[0].angularVelocity.toFixed(3) * 10);
     Engine.update(engine);
-    if (record) recording.push({ mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: a.position, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
+    if (record) recording.push({ mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: { x: a.position.x, y: a.position.y }, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
     //console.log(mass.map(a => a = { x: a.position.x, y: a.position.y }))
     //window.requestAnimationFrame(cycle);
   }};

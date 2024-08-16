@@ -3,7 +3,6 @@ const worker = require('worker_threads');
 const planetesimals = require('./planetesimals.js');
 const maxThreads = 10;
 
-
 function generate(inputs, layers) {
   const values = {};
   const output = [];
@@ -87,19 +86,24 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
   const start = new Date().getTime();
   let agents = [];
   let threadQueue = [];
-  let threads = 0;
+  let threads = [];
+  for (let i = 0; i < maxThreads; i++) {
+    threads.push({ worker: new worker.Worker('./index.js'), ready: true });
+    threads[i].worker.on('message', (message) => {
+      threads[i].ready = true;
+      if (typeof message == 'object') if (agents.push(message) % 10 == 0) console.log(`${agents.length}/${agentCount}`);
+      updateQueue();
+    })
+  }
 
   function updateQueue() {
-    while (threadQueue.length > 0 && threads < maxThreads) {
-      const thread = new worker.Worker('./index.js', { workerData: threadQueue[0]});
-      thread.on('message', (message) => {
-        thread.terminate();
-        if (agents.push(message) % 10 == 0) console.log(`${agents.length}/${agentCount}`);
-        threads--;
-        updateQueue();
-      });
-      threads++;
-      threadQueue.splice(0, 1);
+    while (threadQueue.length > 0 && threads.filter(a => a.ready == true).length > 0) {
+      for (const thread of threads) {
+        if (!thread.ready) continue;
+        thread.ready = false;
+        thread.worker.postMessage(threadQueue[0]);
+        threadQueue.splice(0, 1);
+      }
     }
   }
   if (winners == null) {
@@ -179,30 +183,38 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
     recording = null;
     console.log('Saved recording.');
   } else {
-    const agent = planetesimals(worker.workerData.record);
-    for (let i = 0; i < 3600; i++) {
-      const asteroids = [];
-      agent.mass.slice(1).forEach(a => {
-        const distX = a.position.x - agent.mass[0].position.x;
-        const distY = a.position.y - agent.mass[0].position.y;
-        a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
-        a.playerDist = Math.sqrt(distX**2 + distY**2);
-        const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
-        const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
-        a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
-        a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
-      });
-      agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach(a => asteroids.push(a.playerAngle, a.playerDist, a.velocity.playerAngle, a.velocity.playerDist));
-      const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity].concat(asteroids), worker.workerData.layers);
-      if (output.findIndex(a => isNaN(a)) != -1) console.log(output)
-      agent.keys[37] = output[0] > 0.5; // left
-      agent.keys[38] = output[1] > 0.5; // up
-      agent.keys[39] = output[2] > 0.5; // right
-      agent.keys[40] = output[3] > 0.5; // down
-      agent.keys[32] = output[4] > 0.5; // space
-      agent.cycle();
-    }
-    agent.game.score += agent.game.startingMassValue - agent.game.currentMass;
-    worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, layers: worker.workerData.layers, recording: agent.recording });
+    worker.parentPort.on('message', (message) => {
+      const agent = planetesimals(message.record);
+      //const agent = { mass: [{ position: { x: 0, y: 0 }, angle: 0, velocity: { x: 0, y: 0 }, angularVelocity: 0 }], cycle: () => {}, keys: [], game: { score: 0 }, recording: [] };
+      for (let i = 0; i < 1; i++) {
+        const asteroids = [];
+        agent.mass.slice(1).forEach(a => {
+          const distX = a.position.x - agent.mass[0].position.x;
+          const distY = a.position.y - agent.mass[0].position.y;
+          a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
+          a.playerDist = Math.sqrt(distX**2 + distY**2);
+          const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
+          const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
+          a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
+          a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
+        });
+        agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach(a => asteroids.push(a.playerAngle, a.playerDist, a.velocity.playerAngle, a.velocity.playerDist));
+        const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity].concat(asteroids), message.layers);
+        if (output.findIndex(a => isNaN(a)) != -1) console.log(output)
+        agent.keys[37] = output[0] > 0.5 ? 1 : 0; // left
+        agent.keys[38] = output[1] > 0.5 ? 1 : 0; // up
+        agent.keys[39] = output[2] > 0.5 ? 1 : 0; // right
+        agent.keys[40] = output[3] > 0.5 ? 1 : 0; // down
+        agent.keys[32] = output[4] > 0.5 ? 1 : 0; // space
+        agent.cycle();
+      }
+      agent.game.score += agent.game.startingMassValue - agent.game.currentMass;
+      /*agent.game.score -= Math.abs(agent.keys[32] - 1)
+      agent.game.score -= Math.abs(agent.keys[37] - 2)
+      agent.game.score -= Math.abs(agent.keys[38] - 3)
+      agent.game.score -= Math.abs(agent.keys[39] - 4)
+      agent.game.score -= Math.abs(agent.keys[40] - 5)*/
+      worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, layers: message.layers, recording: agent.recording });
+    });
   }
 })();

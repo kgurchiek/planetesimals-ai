@@ -137,9 +137,9 @@ module.exports = (record) => {
     mass.push();
     //var arrow = Vertices.fromPath('100 0 75 50 100 100 25 100 0 50 25 0');
     var arrow = Vertices.fromPath('0 15 -10 -15 10 -15');
-    // let spawnAngle = Math.random() * 2 * Math.PI - Math.PI;
-    // mass[0] = Matter.Bodies.fromVertices(1000 + Math.cos(spawnAngle) * 500, 1000 + Math.sin(spawnAngle) * 500, arrow, {
-    mass[0] = Matter.Bodies.fromVertices(Math.random() * game.width, Math.random() * game.height, arrow, {
+    let spawnAngle = Math.random() * 2 * Math.PI - Math.PI;
+    mass[0] = Matter.Bodies.fromVertices(1000 + Math.cos(spawnAngle) * 1200, 900 + Math.sin(spawnAngle) * 1200, arrow, {
+    // mass[0] = Matter.Bodies.fromVertices(Math.random() * game.width, Math.random() * game.height, arrow, {
       //density: 0.001,
       alive: true,
       friction: 0,
@@ -159,8 +159,8 @@ module.exports = (record) => {
       },
     });
     World.add(engine.world, mass[0]);
-    // Matter.Body.setAngle(mass[0], Math.atan2(1000 - mass[0].position.y, 1000 - mass[0].position.x) + Math.PI / 2);
-    Matter.Body.setAngle(mass[0], Math.random() * 2 * Math.PI);
+    Matter.Body.setAngle(mass[0], Math.atan2(1000 - mass[0].position.y, 1000 - mass[0].position.x) + Math.PI / 2);
+    // Matter.Body.setAngle(mass[0], Math.random() * 2 * Math.PI);
   }
 
   function randomConvexPolygon(size) { //returns a string of vectors that make a convex polygon

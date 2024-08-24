@@ -137,9 +137,9 @@ module.exports = (record) => {
     mass.push();
     //var arrow = Vertices.fromPath('100 0 75 50 100 100 25 100 0 50 25 0');
     var arrow = Vertices.fromPath('0 15 -10 -15 10 -15');
-    // let spawnAngle = Math.random() * 2 * Math.PI - Math.PI;
-    // mass[0] = Matter.Bodies.fromVertices(1000 + Math.cos(spawnAngle) * 500, 1000 + Math.sin(spawnAngle) * 500, arrow, {
-    mass[0] = Matter.Bodies.fromVertices(Math.random() * game.width, Math.random() * game.height, arrow, {
+    let spawnAngle = Math.random() * 2 * Math.PI - Math.PI;
+    mass[0] = Matter.Bodies.fromVertices(1000 + Math.cos(spawnAngle) * 500, 1000 + Math.sin(spawnAngle) * 500, arrow, {
+    // mass[0] = Matter.Bodies.fromVertices(Math.random() * game.width, Math.random() * game.height, arrow, {
       //density: 0.001,
       alive: true,
       friction: 0,
@@ -159,8 +159,8 @@ module.exports = (record) => {
       },
     });
     World.add(engine.world, mass[0]);
-    // Matter.Body.setAngle(mass[0], Math.atan2(1000 - mass[0].position.y, 1000 - mass[0].position.x) + Math.PI / 2);
-    Matter.Body.setAngle(mass[0], Math.random() * 2 * Math.PI);
+    Matter.Body.setAngle(mass[0], Math.atan2(1000 - mass[0].position.y, 1000 - mass[0].position.x) + Math.PI / 2);
+    // Matter.Body.setAngle(mass[0], Math.random() * 2 * Math.PI);
   }
 
   function randomConvexPolygon(size) { //returns a string of vectors that make a convex polygon
@@ -243,7 +243,7 @@ module.exports = (record) => {
     }
     levelScaling();
     clearMasses();
-    //addWalls();
+    addWalls();
     addPlayer();
     //add  other masses
     for (var j = 0; j < game.totalMass; j++) {
@@ -620,6 +620,9 @@ module.exports = (record) => {
     explosions();
 
     Engine.update(engine);
+
+    if (mass[0].angle > 0) Matter.Body.setAngle(mass[0], Math.abs(mass[0].angle % (Math.PI * 2)))
+    else Matter.Body.setAngle(mass[0], Math.PI * 2 - Math.abs(mass[0].angle % (Math.PI * 2)))
     if (record) recording.push({ score: game.score, keys: [...keys], mass: mass.map(a => ({ alive: a.alive, angle: a.angle, position: { x: a.position.x, y: a.position.y }, vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})), bullet: bullet.map(a => ({ vertices: a.vertices.map(b => ({ x: b.x, y: b.y }))})) });
     //console.log(mass.map(a => a = { x: a.position.x, y: a.position.y }))
     //window.requestAnimationFrame(cycle);

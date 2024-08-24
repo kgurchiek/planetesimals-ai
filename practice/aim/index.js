@@ -1,3 +1,10 @@
+/*
+Aim Notes:
+- Movement had to be locked to prevent the agent from simply moving backward
+- Rotation limit had to be set to 0 and angular friction had to be turned up to make it easier for it to figure out how to rotate
+- Using movement keys was punished before they were unlocked to prevent it from "accidentally" moving after movement was unlocked
+*/
+
 const fs = require('fs');
 const worker = require('worker_threads');
 const planetesimals = require('./planetesimals.js');
@@ -160,7 +167,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
     let average = 0;
     latest.forEach(a => average += a.game.score);
     average /= latest.length;
-    console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
+    console.log(`Generation 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.slice(0, 15).map(a => ({ score: a.game.score, level: a.game.level, angle: a.mass[0].angle, position: a.mass[0].position })));
     let recording = latest[0].recording;
     fs.writeFileSync(`./winners/winner1.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
     latest.forEach(a => a.recording = null);
@@ -184,13 +191,15 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         }
       }
     }
-    recording = latest[0].recording;
-    fs.writeFileSync('./finalWinners.json', JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
-    latest = null;
-    console.log('Saved winners.');
-    fs.writeFileSync('./finalRecording.json', JSON.stringify(recording, '', '  '));
-    recording = null;
-    console.log('Saved recording.');
+    for (const agent of latest) {
+      if (agent.recording.length > 0) {
+        fs.writeFileSync(`./finalWinners.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
+        console.log('Saved winners.');
+        fs.writeFileSync(`./finalRecording.json`, JSON.stringify(agent.recording, '', '  '));
+        delete agent.recording;
+        console.log('Saved recording.');
+      }
+    }
   } else {
     worker.parentPort.on('message', (message) => {
       let agent = planetesimals(message.record);
@@ -201,11 +210,13 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         agent.mass.slice(1).forEach(a => {
           const distX = a.position.x - agent.mass[0].position.x;
           const distY = a.position.y - agent.mass[0].position.y;
-          a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
+          a.playerAngle = Math.atan2(distY, distX) + Math.PI * 3/2;
+          if (a.playerAngle > 0) a.playerAngle = Math.abs(a.playerAngle % (Math.PI * 2))
+          else a.playerAngle = Math.PI * 2 - Math.abs(a.playerAngle % (Math.PI * 2))
           a.playerDist = Math.sqrt(distX**2 + distY**2);
           const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
           const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
-          a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
+          a.velocity.playerAngle = (Math.atan2(nextDistY, nextDistX) + Math.PI * 3/2) - a.playerAngle;
           a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
         });
         agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach((a, i) => {
@@ -225,6 +236,8 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         agent.cycle();
 
         agent.game.score -= Math.abs(agent.mass[0].angle - asteroids[0]);
+        if (output[1] > 0.5) agent.game.score -= 0.5;
+        if (output[3] > 0.5) agent.game.score -= 0.5;
       }
       worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, layers: message.layers, recording: agent.recording, mass: agent.mass });
       message = null;

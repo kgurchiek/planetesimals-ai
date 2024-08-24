@@ -156,24 +156,26 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
 
 (async () => {
   if (worker.isMainThread) {
-    let latest = await generation(46, 5, agentCount, agentCount / 10, null, true);
+    let latest = await generation(47, 5, agentCount, agentCount / 10, null, true);
     let average = 0;
     latest.forEach(a => average += a.game.score);
     average /= latest.length;
-    console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.map(a => ({ score: a.game.score, level: a.game.level })));
-    let recording = latest[0].recording;
-    fs.writeFileSync(`./winners/winner1.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
-    latest.forEach(a => a.recording = null);
-    console.log('Saved winners.');
-    fs.writeFileSync(`./recordings/recording1.json`, JSON.stringify(recording, '', '  '));
-    recording = null;
-    console.log('Saved recording.');
+    console.log(`Generaton 1: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.slice(0, 15).map(a => ({ score: a.game.score, level: a.game.level, position: a.mass[0].position })));
+    for (const agent of latest) {
+      if (agent.recording.length > 0) {
+        fs.writeFileSync(`./winners/winner1.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
+        console.log('Saved winners.');
+        fs.writeFileSync(`./recordings/recording1.json`, JSON.stringify(agent.recording, '', '  '));
+        delete agent.recording;
+        console.log('Saved recording.');
+      }
+    }
     for (let i = 0; i < 5001; i++) {
-      latest = await generation(46, 5, agentCount, agentCount / 10, latest.slice(0, agentCount / 2), i % 100 == 0);
+      latest = await generation(47, 5, agentCount, agentCount / 10, latest.slice(0, agentCount / 2), i % 100 == 0);
       average = 0;
       latest.forEach(a => average += a.game.score);
       average /= latest.length;
-      console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.slice(0, 15).map(a => ({ score: a.game.score, level: a.game.level, angle: a.mass[0].angle, position: a.mass[0].position })));
+      console.log(`Generation ${i + 2}: average: ${average}, median: ${latest[(Math.floor(latest.length/2) + Math.ceil(latest.length/2))/2].game.score}`, latest.slice(0, 15).map(a => ({ score: a.game.score, level: a.game.level, position: a.mass[0].position })));
       for (const agent of latest) {
         if (agent.recording.length > 0) {
           fs.writeFileSync(`./winners/winner${i + 2}.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
@@ -184,13 +186,15 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         }
       }
     }
-    recording = latest[0].recording;
-    fs.writeFileSync('./finalWinners.json', JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
-    latest = null;
-    console.log('Saved winners.');
-    fs.writeFileSync('./finalRecording.json', JSON.stringify(recording, '', '  '));
-    recording = null;
-    console.log('Saved recording.');
+    for (const agent of latest) {
+      if (agent.recording.length > 0) {
+        fs.writeFileSync(`./finalWinners.json`, JSON.stringify(latest.map(a => ({ layers: a.layers })).slice(0, agentCount / 2), '', '  '));
+        console.log('Saved winners.');
+        fs.writeFileSync(`./finalRecording.json`, JSON.stringify(agent.recording, '', '  '));
+        delete agent.recording;
+        console.log('Saved recording.');
+      }
+    }
   } else {
     worker.parentPort.on('message', (message) => {
       let agent = planetesimals(message.record);
@@ -201,11 +205,13 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         agent.mass.slice(1).forEach(a => {
           const distX = a.position.x - agent.mass[0].position.x;
           const distY = a.position.y - agent.mass[0].position.y;
-          a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
+          a.playerAngle = Math.atan2(distY, distX) + Math.PI * 3/2;
+          if (a.playerAngle > 0) a.playerAngle = Math.abs(a.playerAngle % (Math.PI * 2))
+          else a.playerAngle = Math.PI * 2 - Math.abs(a.playerAngle % (Math.PI * 2))
           a.playerDist = Math.sqrt(distX**2 + distY**2);
           const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
           const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
-          a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
+          a.velocity.playerAngle = (Math.atan2(nextDistY, nextDistX) + Math.PI * 3/2) - a.playerAngle;
           a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
         });
         agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach((a, i) => {
@@ -215,7 +221,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
           asteroids[i + 3] = a.velocity.playerDist;
         });
         agent.mass.splice(1);
-        const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity].concat(asteroids), message.layers);
+        const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity, agent.game.width].concat(asteroids), message.layers);
         if (output.findIndex(a => isNaN(a)) != -1) console.log(output)
         agent.keys[37] = output[0] > 0.5; // left
         agent.keys[38] = output[1] > 0.5; // up
@@ -224,7 +230,9 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         agent.keys[32] = output[4] > 0.5; // space
         agent.cycle();
 
-        agent.game.score -= Math.abs(agent.mass[0].angle - asteroids[0]) + (asteroids[1] > 810 ? asteroids[1] : 0) / 4;
+        agent.game.score -= Math.abs(agent.mass[0].angle - asteroids[0]) //+ (asteroids[1] > 1000 ? asteroids[1] : (asteroids[1] < 300 ? (300 - asteroids[1]) * 4 : 0)) / 50;
+        // if (asteroids[1] > 810) agent.game.score -= asteroids[1] / 50;
+        // if (agent.keys[38]) console.log(agent.keys[38], Math.abs(agent.mass[0].angle - asteroids[0]) + (asteroids[1] > 810 ? asteroids[1] : 0) / 50);
       }
       worker.parentPort.postMessage({ game: { score: agent.game.score, level: agent.game.level }, layers: message.layers, recording: agent.recording, mass: agent.mass });
       message = null;

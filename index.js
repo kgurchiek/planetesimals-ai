@@ -152,7 +152,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
 
 (async () => {
   if (worker.isMainThread) {
-    let latest = await generation(46, 5, agentCount);
+    let latest = await generation(47, 5, agentCount);
     let average = 0;
     latest.forEach(a => average += a.game.score);
     average /= latest.length;
@@ -165,7 +165,7 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
     recording = null;
     console.log('Saved recording.');
     for (let i = 0; i < 5001; i++) {
-      latest = await generation(46, 5, agentCount, agentCount / 10, latest.slice(0, agentCount / 2), i % 100 == 0);
+      latest = await generation(47, 5, agentCount, agentCount / 10, latest.slice(0, agentCount / 2), i % 100 == 0);
       average = 0;
       latest.forEach(a => average += a.game.score);
       average /= latest.length;
@@ -196,15 +196,17 @@ async function generation(inputs, outputs, agentCount, winners, mutators, record
         agent.mass.slice(1).forEach(a => {
           const distX = a.position.x - agent.mass[0].position.x;
           const distY = a.position.y - agent.mass[0].position.y;
-          a.playerAngle = Math.atan2(distX, -distY) + Math.PI;
+          a.playerAngle = Math.atan2(distY, distX) + Math.PI * 3/2;
+          if (a.playerAngle > 0) a.playerAngle = Math.abs(a.playerAngle % (Math.PI * 2))
+          else a.playerAngle = Math.PI * 2 - Math.abs(a.playerAngle % (Math.PI * 2))
           a.playerDist = Math.sqrt(distX**2 + distY**2);
           const nextDistX = (a.position.x + a.velocity.x) - agent.mass[0].position.x;
           const nextDistY = (a.position.y + a.velocity.y) - agent.mass[0].position.y;
-          a.velocity.playerAngle = (Math.atan2(nextDistX, -nextDistY) + Math.PI) - a.playerAngle;
+          a.velocity.playerAngle = (Math.atan2(nextDistY, nextDistX) + Math.PI * 3/2) - a.playerAngle;
           a.velocity.playerDist = Math.sqrt(nextDistX**2 + nextDistY**2) - a.playerDist;
         });
         agent.mass.slice(1).sort((a, b) => a.playerDist - b.playerDist).slice(0, 10).forEach(a => asteroids.push(a.playerAngle, a.playerDist, a.velocity.playerAngle, a.velocity.playerDist));
-        const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity].concat(asteroids), message.layers);
+        const output = generate([agent.mass[0].position.x, agent.mass[0].position.y, agent.mass[0].velocity.x, agent.mass[0].velocity.y, agent.mass[0].angle, agent.mass[0].angularVelocity, agent.game.width].concat(asteroids), message.layers);
         if (output.findIndex(a => isNaN(a)) != -1) console.log(output)
         agent.keys[37] = output[0] > 0.5; // left
         agent.keys[38] = output[1] > 0.5; // up

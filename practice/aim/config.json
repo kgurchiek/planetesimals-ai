@@ -1,3 +1,10 @@
 {
-  "winners": "./winners/archive/winner502.json"
+  "winners": "winners/archive/winner800.json",
+  "offset": 801,
+  "maxThreads": 12,
+  "agentCount": 100,
+  "gameCount": 100,
+  "generations": 5001,
+  "frames": 600,
+  "asteroidCount": 1
 }
